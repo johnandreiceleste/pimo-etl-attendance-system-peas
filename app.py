@@ -8,7 +8,6 @@ from datetime import datetime, date, time, timedelta
 from functools import wraps
 import os, base64, io, csv, json
 from PIL import Image
-from supabase import create_client, Client
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'pimo-etl-secret-dev-only')
@@ -22,8 +21,6 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
 SUPABASE_BUCKET = 'dtr-photos'
 
-def get_supabase() -> Client:
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 db = SQLAlchemy(app)
 @app.context_processor
