@@ -25,6 +25,7 @@ SUPABASE_BUCKET = 'dtr-photos'
 db = SQLAlchemy(app)
 @app.context_processor
 def inject_globals():
+    test_mode = get_config('test_mode') == 'true'
     if current_user.is_authenticated and current_user.is_admin:
         try:
             pw_pending = PasswordChangeRequest.query.filter_by(status='pending').count()
@@ -32,7 +33,7 @@ def inject_globals():
             pw_pending = 0
     else:
         pw_pending = 0
-    return dict(pw_pending=pw_pending)
+    return dict(pw_pending=pw_pending, test_mode=test_mode)
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -103,6 +104,27 @@ class PasswordChangeRequest(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     resolved_at = db.Column(db.DateTime, nullable=True)
     user = db.relationship('User', backref='password_requests')
+    
+class SystemConfig(db.Model):
+    __tablename__ = 'system_config'
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.String(200), nullable=False)
+
+def get_config(key, default='false'):
+    try:
+        c = SystemConfig.query.get(key)
+        return c.value if c else default
+    except:
+        return default
+
+def set_config(key, value):
+    c = SystemConfig.query.get(key)
+    if c:
+        c.value = value
+    else:
+        c = SystemConfig(key=key, value=value)
+        db.session.add(c)
+    db.session.commit()
 
 
 # ─── Login Manager ─────────────────────────────────────────────────────────────
@@ -203,7 +225,7 @@ def check_late(session_type, action):
 
 # Test mode stored in session
 def is_monday():
-    if session.get('test_mode'):
+    if get_config('test_mode') == 'true':
         return True
     return date.today().weekday() == 0
 
@@ -689,8 +711,10 @@ def api_status():
 #for test mode
 @app.route('/intern/toggle-test-mode', methods=['POST'])
 @login_required
+@admin_required
 def intern_toggle_test_mode():
-    session['test_mode'] = not session.get('test_mode', False)
+    current = get_config('test_mode')
+    set_config('test_mode', 'false' if current == 'true' else 'true')
     return redirect(request.referrer or url_for('admin_dashboard'))
 
 @app.route('/admin/attendance/delete/<int:log_id>', methods=['POST'])

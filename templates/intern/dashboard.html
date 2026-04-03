@@ -11,7 +11,7 @@
   </button>
 </form> -->
 
-{% if not monday and not session.get('test_mode') %}
+{% if not monday and not test_mode %}
 <div class="alert alert-info">
   <i class="fa-solid fa-circle-info"></i>
   <div>
@@ -70,7 +70,7 @@
         {% if status.AM_IN %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr in" onclick="openCamera('AM','IN')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+          <button class="btn-dtr in" onclick="openCamera('AM','IN')" {% if not monday and not test_mode %}disabled{% endif %}>
             <i class="fa-solid fa-camera"></i> Time In
           </button>
         {% endif %}
@@ -91,7 +91,7 @@
         {% if status.AM_OUT %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr out" onclick="openCamera('AM','OUT')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+          <button class="btn-dtr out" onclick="openCamera('AM','OUT')" {% if not monday and not test_mode %}disabled{% endif %}>
             <i class="fa-solid fa-camera"></i> Time Out
           </button>
         {% endif %}
@@ -124,7 +124,7 @@
         {% if status.PM_IN %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr in" onclick="openCamera('PM','IN')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+          <button class="btn-dtr in" onclick="openCamera('PM','IN')" {% if not monday and not test_mode %}disabled{% endif %}>
             <i class="fa-solid fa-camera"></i> Time In
           </button>
         {% endif %}
@@ -145,7 +145,7 @@
         {% if status.PM_OUT %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr out" onclick="openCamera('PM','OUT')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+          <button class="btn-dtr out" onclick="openCamera('PM','OUT')" {% if not monday and not test_mode %}disabled{% endif %}>
             <i class="fa-solid fa-camera"></i> Time Out
           </button>
         {% endif %}
