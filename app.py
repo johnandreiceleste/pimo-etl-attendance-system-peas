@@ -499,6 +499,7 @@ def admin_users():
 def admin_delete_user(uid):
     user = User.query.get_or_404(uid)
     DTRLog.query.filter_by(user_id=uid).delete()
+    PasswordChangeRequest.query.filter_by(user_id=uid).delete()
     db.session.delete(user)
     db.session.commit()
     flash(f'User {user.full_name} deleted.', 'success')
