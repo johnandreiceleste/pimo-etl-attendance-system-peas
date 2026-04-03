@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Manage Interns — PIMO-ETL Admin{% endblock %}
+{% block page_title %}Intern Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-users" style="color:var(--teal)"></i> Registered Interns</span>
+    <span class="badge badge-navy">{{ users|length }} total</span>
+  </div>
+
+  {% if users %}
+
+  <!-- Filters + Search -->
+<div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+  <div style="flex:1;min-width:180px;position:relative;">
+    <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;"></i>
+    <input type="text" id="u-search" placeholder="Search by name or email..." class="form-control" style="padding-left:32px;" oninput="applyUserFilters()">
+  </div>
+  <select id="u-unit" class="form-control" style="max-width:160px;" onchange="applyUserFilters()">
+    <option value="">All Units</option>
+    {% for unit in ['PROPERTY','OIM','ADRIS','LARIS','ASRIS','ENGINEERING','ADMINISTRATIVE','FINANCE','PLANNING','DESIGN','CONSTRUCTION','EQUIPMENT','IDU','SURVEY','CASHIERING','OTHER'] %}
+    <option value="{{ unit }}">{{ unit }}</option>
+    {% endfor %}
+  </select>
+  <select id="u-sort" class="form-control" style="max-width:180px;" onchange="applyUserFilters()">
+    <option value="alpha-asc">Name A → Z</option>
+    <option value="alpha-desc">Name Z → A</option>
+    <option value="newest">Newest Registered</option>
+    <option value="oldest">Oldest Registered</option>
+    <option value="logs-desc">Most Logs</option>
+  </select>
+  <button class="btn btn-secondary" onclick="resetUserFilters()" style="white-space:nowrap;">
+    <i class="fa-solid fa-rotate-left"></i> Reset
+  </button>
+  <span id="u-count" style="font-size:12px;color:var(--text-muted);white-space:nowrap;"></span>
+</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Full Name</th>
+          <th>Email</th>
+          <th>Unit</th>
+          <th>Registered</th>
+          <th>Total Logs</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr data-name="{{ user.last_name|lower }} {{ user.first_name|lower }} {{ user.email|lower }}"
+        data-unit="{{ user.unit }}"
+        data-date="{{ user.created_at.strftime('%Y%m%d%H%M%S') }}"
+        data-logs="{{ user.dtr_logs|length }}">
+          <td style="color:var(--text-muted);font-size:13px;">{{ loop.index }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;flex-shrink:0;">
+                {{ user.first_name[0] }}{{ user.last_name[0] }}
+              </div>
+              <div>
+                <div style="font-weight:600;">{{ user.last_name }}, {{ user.first_name }}{% if user.middle_name %} {{ user.middle_name[0] }}.{% endif %}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:13px;color:var(--text-muted);">{{ user.email }}</td>
+          <td><span class="badge badge-navy">{{ user.unit }}</span></td>
+          <td style="font-size:13px;color:var(--text-muted);">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+          <td style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">
+            {{ user.dtr_logs|length }}
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('admin_delete_user', uid=user.id) }}"
+                  onsubmit="return confirm('Delete {{ user.full_name }}? This will remove all their logs too.')">
+              <button type="submit" class="btn btn-danger" style="font-size:12px;padding:6px 14px;">
+                <i class="fa-solid fa-trash"></i> Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="no-data">
+    <i class="fa-solid fa-user-plus"></i>
+    <p>No interns registered yet.<br>Share the registration link with your team.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Unit Summary -->
+{% if users %}
+<div class="card" style="margin-top:20px;">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--gold)"></i> By Unit</span>
+  </div>
+  <div class="card-body" style="display:flex;flex-wrap:wrap;gap:10px;">
+    {% set unit_counts = {} %}
+    {% for user in users %}
+      {% if user.unit in unit_counts %}
+        {% set _ = unit_counts.update({user.unit: unit_counts[user.unit] + 1}) %}
+      {% else %}
+        {% set _ = unit_counts.update({user.unit: 1}) %}
+      {% endif %}
+    {% endfor %}
+    {% for unit, count in unit_counts.items() %}
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-navy">{{ unit }}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">{{ count }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+function applyUserFilters() {
+  const search = document.getElementById('u-search').value.toLowerCase();
+  const unit = document.getElementById('u-unit').value;
+  const sort = document.getElementById('u-sort').value;
+
+  const tbody = document.querySelector('table tbody');
+  let rows = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.forEach(row => {
+    const name = row.dataset.name || '';
+    const rowUnit = row.dataset.unit || '';
+    const matchSearch = !search || name.includes(search);
+    const matchUnit = !unit || rowUnit === unit;
+    row.style.display = (matchSearch && matchUnit) ? '' : 'none';
+  });
+
+  const visible = rows.filter(r => r.style.display !== 'none');
+  visible.sort((a, b) => {
+    if (sort === 'alpha-asc') return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+    if (sort === 'alpha-desc') return (b.dataset.name || '').localeCompare(a.dataset.name || '');
+    if (sort === 'newest') return (b.dataset.date || '').localeCompare(a.dataset.date || '');
+    if (sort === 'oldest') return (a.dataset.date || '').localeCompare(b.dataset.date || '');
+    if (sort === 'logs-desc') return parseInt(b.dataset.logs || 0) - parseInt(a.dataset.logs || 0);
+    return 0;
+  });
+  visible.forEach(row => tbody.appendChild(row));
+
+  // Renumber index column
+  visible.forEach((row, i) => {
+    const firstTd = row.querySelector('td:first-child');
+    if (firstTd) firstTd.textContent = i + 1;
+  });
+
+  document.getElementById('u-count').textContent = `Showing ${visible.length} of ${rows.length}`;
+}
+
+function resetUserFilters() {
+  document.getElementById('u-search').value = '';
+  document.getElementById('u-unit').value = '';
+  document.getElementById('u-sort').value = 'alpha-asc';
+  applyUserFilters();
+}
+
+document.addEventListener('DOMContentLoaded', applyUserFilters);
+</script>
+{% endblock %}
+{% endblock %}

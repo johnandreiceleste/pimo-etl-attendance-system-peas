@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+{% block title %}Attendance — PIMO-ETL Admin{% endblock %}
+{% block page_title %}Attendance Validation{% endblock %}
+
+{% block content %}
+<style>
+.verify-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(4px);
+  z-index: 2000; display: none;
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.verify-modal-overlay.show { display: flex; }
+.verify-modal-box {
+  background: var(--card);
+  border-radius: 16px; overflow: hidden;
+  width: 100%; max-width: 900px;
+  display: grid; grid-template-columns: 1fr 340px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+  max-height: 92vh;
+  animation: slideUp 0.25s ease;
+}
+@media (max-width: 700px) {
+  .verify-modal-box { grid-template-columns: 1fr; max-height: 95vh; overflow-y: auto; }
+}
+
+.verify-img-panel {
+  background: #000; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden; position: relative; min-height: 320px;
+}
+.verify-img-panel img {
+  max-width: 100%; max-height: 70vh;
+  object-fit: contain; display: block;
+  transform-origin: center; transition: transform 0.2s;
+  cursor: grab;
+}
+.verify-zoom-controls {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; background: rgba(0,0,0,0.6);
+  border-radius: 8px; padding: 6px 10px;
+}
+.zoom-btn {
+  background: rgba(255,255,255,0.15); color: white;
+  border: none; border-radius: 6px; cursor: pointer;
+  padding: 4px 12px; font-size: 16px; font-family: 'Barlow', sans-serif;
+  transition: background 0.2s;
+}
+.zoom-btn:hover { background: rgba(255,255,255,0.3); }
+.zoom-label { color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 600; line-height: 1; display: flex; align-items: center; padding: 0 4px; min-width: 40px; justify-content: center; }
+
+.verify-info-panel {
+  padding: 24px; display: flex; flex-direction: column; gap: 16px;
+  overflow-y: auto;
+}
+.verify-intern-name { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--navy); }
+.verify-log-detail { background: var(--bg); border-radius: 8px; padding: 12px 14px; }
+.verify-log-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 4px; }
+.verify-log-row:last-child { margin-bottom: 0; }
+.verify-log-label { color: var(--text-muted); font-weight: 500; }
+.verify-log-value { font-weight: 600; color: var(--text); }
+.verify-remarks-input {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border); font-family: 'Barlow', sans-serif;
+  font-size: 13px; resize: vertical; min-height: 72px;
+  background: var(--bg); color: var(--text);
+  transition: border-color 0.2s;
+}
+.verify-remarks-input:focus { outline: none; border-color: var(--teal); background: white; }
+.verify-action-btns { display: flex; flex-direction: column; gap: 8px; }
+.btn-verify-confirm {
+  background: var(--success); color: white; border: none;
+  border-radius: 8px; padding: 12px; cursor: pointer;
+  font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+}
+.btn-verify-confirm:hover { background: #0da271; transform: translateY(-1px); }
+.btn-verify-confirm:disabled { background: var(--border); color: var(--text-muted); transform: none; cursor: default; }
+.btn-verify-invalid {
+  background: #fee2e2; color: #991b1b; border: none;
+  border-radius: 8px; padding: 10px; cursor: pointer;
+  font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.2s;
+}
+.btn-verify-invalid:hover { background: #fca5a5; }
+.btn-verify-close {
+  background: var(--bg); color: var(--text-muted); border: none;
+  border-radius: 8px; padding: 10px; cursor: pointer;
+  font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-verify-close:hover { background: var(--border); }
+
+.attendance-log-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.attendance-log-image { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+.attendance-log-time { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; }
+.attendance-log-late { font-size: 11px; }
+
+/* Nav arrows for multiple photos */
+.verify-nav { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.verify-nav-btn {
+  background: rgba(255,255,255,0.1); color: white; border: none;
+  border-radius: 6px; padding: 5px 14px; cursor: pointer; font-size: 14px;
+  transition: background 0.2s;
+}
+.verify-nav-btn:hover { background: rgba(255,255,255,0.25); }
+.verify-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.verify-counter { color: rgba(255,255,255,0.6); font-size: 12px; display: flex; align-items: center; }
+
+@media (max-width: 600px) {
+  .verify-modal-box { grid-template-columns: 1fr; }
+}
+</style>
+
+<!-- Date Picker + Export -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:200px;">
+      <i class="fa-solid fa-calendar" style="color:var(--teal);font-size:18px;"></i>
+      <form method="GET" action="{{ url_for('admin_attendance') }}" style="display:flex;gap:10px;align-items:center;flex:1;">
+        <input type="date" name="date" value="{{ selected_date.isoformat() }}" class="form-control" style="max-width:200px;" onchange="this.form.submit()">
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> View</button>
+      </form>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_csv') }}?date={{ selected_date.isoformat() }}" class="btn" style="background:var(--success);color:white;text-decoration:none;font-size:13px;">
+        <i class="fa-solid fa-file-csv"></i> CSV
+      </a>
+      <a href="{{ url_for('export_pdf') }}?date={{ selected_date.isoformat() }}" class="btn" style="background:var(--danger);color:white;text-decoration:none;font-size:13px;">
+        <i class="fa-solid fa-file-pdf"></i> PDF
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Filters + Search -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-body" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+    <!-- Search -->
+    <div style="flex:1;min-width:180px;position:relative;">
+      <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;"></i>
+      <input type="text" id="search-name" placeholder="Search by name..." class="form-control" style="padding-left:32px;" oninput="applyFilters()">
+    </div>
+    <!-- Unit -->
+    <select id="filter-unit" class="form-control" style="max-width:160px;" onchange="applyFilters()">
+      <option value="">All Units</option>
+      {% for unit in ['PROPERTY','OIM','ADRIS','LARIS','ASRIS','ENGINEERING','ADMINISTRATIVE','FINANCE','PLANNING','DESIGN','CONSTRUCTION','EQUIPMENT','IDU','SURVEY','CASHIERING','OTHER'] %}
+      <option value="{{ unit }}">{{ unit }}</option>
+      {% endfor %}
+    </select>
+    <!-- Status -->
+    <select id="filter-status" class="form-control" style="max-width:160px;" onchange="applyFilters()">
+      <option value="">All Status</option>
+      <option value="verified">Fully Verified</option>
+      <option value="pending">Pending</option>
+      <option value="absent">Absent</option>
+    </select>
+    <!-- Sort -->
+    <select id="filter-sort" class="form-control" style="max-width:180px;" onchange="applyFilters()">
+      <option value="alpha-asc">Name A → Z</option>
+      <option value="alpha-desc">Name Z → A</option>
+      <option value="time-asc">Oldest Log First</option>
+      <option value="time-desc">Latest Log First</option>
+    </select>
+    <!-- Reset -->
+    <button class="btn btn-secondary" onclick="resetFilters()" style="white-space:nowrap;">
+      <i class="fa-solid fa-rotate-left"></i> Reset
+    </button>
+    <span id="filter-count" style="font-size:12px;color:var(--text-muted);white-space:nowrap;"></span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fa-solid fa-calendar-check" style="color:var(--teal)"></i>
+      {{ selected_date.strftime('%A, %B %d, %Y') }}
+    </span>
+    <span class="badge badge-navy">{{ users|length }} interns</span>
+  </div>
+
+  {% if users %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Intern</th>
+          <th>Unit</th>
+          <th>AM In</th>
+          <th>AM Out</th>
+          <th>PM In</th>
+          <th>PM Out</th>
+          <th>Status</th>
+          <th>Action</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        {% set s = attendance[user.id] %}
+        {% set logs_list = [] %}
+        {% if s.AM_IN %}{% set _ = logs_list.append(s.AM_IN) %}{% endif %}
+        {% if s.AM_OUT %}{% set _ = logs_list.append(s.AM_OUT) %}{% endif %}
+        {% if s.PM_IN %}{% set _ = logs_list.append(s.PM_IN) %}{% endif %}
+        {% if s.PM_OUT %}{% set _ = logs_list.append(s.PM_OUT) %}{% endif %}
+        {% set first_time = '' %}
+        {% if s.AM_IN %}{% set first_time = s.AM_IN.timestamp.strftime('%H%M') %}{% elif s.PM_IN %}{% set first_time = s.PM_IN.timestamp.strftime('%H%M') %}{% endif %}
+        {% set all_verified = (not s.AM_IN or s.AM_IN.is_verified) and (not s.AM_OUT or s.AM_OUT.is_verified) and (not s.PM_IN or s.PM_IN.is_verified) and (not s.PM_OUT or s.PM_OUT.is_verified) %}
+        {% set any_log = s.AM_IN or s.AM_OUT or s.PM_IN or s.PM_OUT %}
+        {% set row_status = 'absent' if not any_log else ('verified' if all_verified else 'pending') %}
+        <tr data-name="{{ user.last_name|lower }} {{ user.first_name|lower }}"
+            data-unit="{{ user.unit }}"
+            data-status="{{ row_status }}"
+            data-time="{{ first_time }}">
+          <td>
+            <div style="font-weight:600;">{{ user.last_name }}, {{ user.first_name }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ user.email }}</div>
+          </td>
+          <td><span class="badge badge-navy">{{ user.unit }}</span></td>
+
+          <!-- AM In -->
+          <td>
+            {% if s.AM_IN %}
+              <div class="attendance-log-cell">
+                {% if s.AM_IN.photo_path %}
+                  <img src="{{ s.AM_IN.photo_path }}" class="attendance-log-image"
+                       onclick="openVerifyModal({{ s.AM_IN.id }}, '{{ s.AM_IN.photo_path }}', '{{ user.full_name }}', 'AM In', '{{ s.AM_IN.timestamp.strftime('%I:%M %p') }}', {{ 'true' if s.AM_IN.is_late else 'false' }}, {{ 'true' if s.AM_IN.is_verified else 'false' }}, '{{ s.AM_IN.admin_remarks or '' }}')"
+                       title="Click to verify">
+                {% endif %}
+                <div class="attendance-log-time">{{ s.AM_IN.timestamp.strftime('%I:%M %p') }}</div>
+                {% if s.AM_IN.is_late %}<span class="badge badge-danger attendance-log-late">LATE</span>{% endif %}
+              </div>
+            {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+          </td>
+
+          <!-- AM Out -->
+          <td>
+            {% if s.AM_OUT %}
+              <div class="attendance-log-cell">
+                {% if s.AM_OUT.photo_path %}
+                  <img src="{{ s.AM_OUT.photo_path }}" class="attendance-log-image"
+                       onclick="openVerifyModal({{ s.AM_OUT.id }}, '{{ s.AM_OUT.photo_path }}', '{{ user.full_name }}', 'AM Out', '{{ s.AM_OUT.timestamp.strftime('%I:%M %p') }}', false, {{ 'true' if s.AM_OUT.is_verified else 'false' }}, '{{ s.AM_OUT.admin_remarks or '' }}')"
+                       title="Click to verify">
+                {% endif %}
+                <div class="attendance-log-time">{{ s.AM_OUT.timestamp.strftime('%I:%M %p') }}</div>
+                {% if s.AM_OUT.is_late %}<span class="badge badge-danger attendance-log-late">LATE</span>{% endif %}
+              </div>
+            {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+          </td>
+
+          <!-- PM In -->
+          <td>
+            {% if s.PM_IN %}
+              <div class="attendance-log-cell">
+                {% if s.PM_IN.photo_path %}
+                  <img src="{{ s.PM_IN.photo_path }}" class="attendance-log-image"
+                       onclick="openVerifyModal({{ s.PM_IN.id }}, '{{ s.PM_IN.photo_path }}', '{{ user.full_name }}', 'PM In', '{{ s.PM_IN.timestamp.strftime('%I:%M %p') }}', {{ 'true' if s.PM_IN.is_late else 'false' }}, {{ 'true' if s.PM_IN.is_verified else 'false' }}, '{{ s.PM_IN.admin_remarks or '' }}')"
+                       title="Click to verify">
+                {% endif %}
+                <div class="attendance-log-time">{{ s.PM_IN.timestamp.strftime('%I:%M %p') }}</div>
+                {% if s.PM_IN.is_late %}<span class="badge badge-danger attendance-log-late">LATE</span>{% endif %}
+              </div>
+            {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+          </td>
+
+          <!-- PM Out -->
+          <td>
+            {% if s.PM_OUT %}
+              <div class="attendance-log-cell">
+                {% if s.PM_OUT.photo_path %}
+                  <img src="{{ s.PM_OUT.photo_path }}" class="attendance-log-image"
+                       onclick="openVerifyModal({{ s.PM_OUT.id }}, '{{ s.PM_OUT.photo_path }}', '{{ user.full_name }}', 'PM Out', '{{ s.PM_OUT.timestamp.strftime('%I:%M %p') }}', false, {{ 'true' if s.PM_OUT.is_verified else 'false' }}, '{{ s.PM_OUT.admin_remarks or '' }}')"
+                       title="Click to verify">
+                {% endif %}
+                <div class="attendance-log-time">{{ s.PM_OUT.timestamp.strftime('%I:%M %p') }}</div>
+                {% if s.PM_OUT.is_late %}<span class="badge badge-danger attendance-log-late">LATE</span>{% endif %}
+              </div>
+            {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+          </td>
+
+          <!-- Status -->
+          <td>
+            {% set any_log = s.AM_IN or s.AM_OUT or s.PM_IN or s.PM_OUT %}
+            {% set all_verified = any_log and
+              (not s.AM_IN or s.AM_IN.is_verified) and
+              (not s.AM_OUT or s.AM_OUT.is_verified) and
+              (not s.PM_IN or s.PM_IN.is_verified) and
+              (not s.PM_OUT or s.PM_OUT.is_verified) %}
+            {% if all_verified and any_log %}
+              <span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> All Verified</span>
+            {% elif any_log %}
+              {% set verified_count = [0] %}
+              {% if s.AM_IN and s.AM_IN.is_verified %}{% set _ = verified_count.append(1) %}{% endif %}
+              {% if s.AM_OUT and s.AM_OUT.is_verified %}{% set _ = verified_count.append(1) %}{% endif %}
+              {% if s.PM_IN and s.PM_IN.is_verified %}{% set _ = verified_count.append(1) %}{% endif %}
+              {% if s.PM_OUT and s.PM_OUT.is_verified %}{% set _ = verified_count.append(1) %}{% endif %}
+              <span class="badge badge-warning"><i class="fa-solid fa-hourglass-half"></i> {{ verified_count|length - 1 }}/{{ logs_list|length }} Verified</span>
+            {% else %}
+              <span class="badge badge-neutral">Absent</span>
+            {% endif %}
+          </td>
+
+          <!-- Action: Verify All -->
+          <td>
+            {% if logs_list %}
+              {% set all_ids = [] %}
+              {% for log in logs_list %}{% set _ = all_ids.append(log.id) %}{% endfor %}
+              <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;white-space:nowrap;"
+                      onclick="verifyAll([{{ all_ids|join(',') }}], this)">
+                <i class="fa-solid fa-check-double"></i> Verify All
+              </button>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:12px;">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Delete -->
+          <td>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              {% for key, log in s.items() %}
+                {% if log %}
+                  <button class="btn" style="font-size:11px;padding:4px 8px;background:#fee2e2;color:#991b1b;white-space:nowrap;"
+                          onclick="deleteLog({{ log.id }}, this)">
+                    <i class="fa-solid fa-trash"></i> {{ key.replace('_',' ') }}
+                  </button>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="no-data">
+    <i class="fa-solid fa-users-slash"></i>
+    <p>No registered interns yet.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ─── Verify Modal ─────────────────────────────── -->
+<div class="verify-modal-overlay" id="verify-modal" onclick="closeVerifyModal()">
+  <div class="verify-modal-box" onclick="event.stopPropagation()">
+
+    <!-- Left: Image + zoom -->
+    <div class="verify-img-panel">
+      <img id="vm-img" src="" alt="Attendance photo">
+      <div class="verify-zoom-controls">
+        <button class="zoom-btn" onclick="vmZoom(-0.2)">−</button>
+        <span class="zoom-label" id="vm-zoom-label">100%</span>
+        <button class="zoom-btn" onclick="vmZoom(0.2)">+</button>
+        <button class="zoom-btn" style="font-size:12px;" onclick="vmResetZoom()"><i class="fa-solid fa-expand"></i></button>
+      </div>
+    </div>
+
+    <!-- Right: Info + actions -->
+    <div class="verify-info-panel">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Intern</div>
+        <div class="verify-intern-name" id="vm-name">—</div>
+      </div>
+
+      <div class="verify-log-detail">
+        <div class="verify-log-row">
+          <span class="verify-log-label">Log Type</span>
+          <span class="verify-log-value" id="vm-type">—</span>
+        </div>
+        <div class="verify-log-row">
+          <span class="verify-log-label">Time</span>
+          <span class="verify-log-value" id="vm-time">—</span>
+        </div>
+        <div class="verify-log-row">
+          <span class="verify-log-label">Punctuality</span>
+          <span id="vm-late">—</span>
+        </div>
+        <div class="verify-log-row">
+          <span class="verify-log-label">Status</span>
+          <span id="vm-status">—</span>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">
+          Remarks <span style="font-weight:400;color:var(--text-muted);">(optional)</span>
+        </label>
+        <textarea id="vm-remarks" class="verify-remarks-input" placeholder="e.g. Approved — internet issues cited..."></textarea>
+      </div>
+
+      <div class="verify-action-btns">
+        <button class="btn-verify-confirm" id="vm-verify-btn" onclick="submitVerify()">
+          <i class="fa-solid fa-shield-check"></i> <span id="vm-verify-label">Mark as Verified</span>
+        </button>
+        <button class="btn-verify-close" onclick="closeVerifyModal()">
+          <i class="fa-solid fa-xmark"></i> Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let vmCurrentLogId = null;
+let vmZoomLevel = 1;
+
+function openVerifyModal(logId, photoUrl, name, type, time, isLate, isVerified, remarks) {
+  vmCurrentLogId = logId;
+  vmZoomLevel = 1;
+
+  document.getElementById('vm-img').src = photoUrl;
+  document.getElementById('vm-img').style.transform = 'scale(1)';
+  document.getElementById('vm-zoom-label').textContent = '100%';
+  document.getElementById('vm-name').textContent = name;
+  document.getElementById('vm-type').textContent = type;
+  document.getElementById('vm-time').textContent = time;
+  document.getElementById('vm-remarks').value = remarks || '';
+
+  document.getElementById('vm-late').innerHTML = isLate
+    ? '<span class="badge badge-danger">⚠ LATE</span>'
+    : '<span class="badge badge-success">✓ On Time</span>';
+
+  const verifyBtn = document.getElementById('vm-verify-btn');
+  const verifyLabel = document.getElementById('vm-verify-label');
+  if (isVerified) {
+    verifyBtn.disabled = true;
+    verifyLabel.textContent = 'Already Verified';
+    document.getElementById('vm-status').innerHTML = '<span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Verified</span>';
+  } else {
+    verifyBtn.disabled = false;
+    verifyLabel.textContent = 'Mark as Verified';
+    document.getElementById('vm-status').innerHTML = '<span class="badge badge-warning"><i class="fa-solid fa-hourglass-half"></i> Pending</span>';
+  }
+
+  document.getElementById('verify-modal').classList.add('show');
+}
+
+function closeVerifyModal() {
+  document.getElementById('verify-modal').classList.remove('show');
+  vmCurrentLogId = null;
+}
+
+function vmZoom(delta) {
+  vmZoomLevel = Math.min(4, Math.max(0.3, vmZoomLevel + delta));
+  document.getElementById('vm-img').style.transform = `scale(${vmZoomLevel})`;
+  document.getElementById('vm-zoom-label').textContent = Math.round(vmZoomLevel * 100) + '%';
+}
+
+function vmResetZoom() {
+  vmZoomLevel = 1;
+  document.getElementById('vm-img').style.transform = 'scale(1)';
+  document.getElementById('vm-zoom-label').textContent = '100%';
+}
+
+// Scroll to zoom inside modal
+document.addEventListener('DOMContentLoaded', () => {
+  const panel = document.querySelector('.verify-img-panel');
+  if (panel) {
+    panel.addEventListener('wheel', (e) => {
+      if (!document.getElementById('verify-modal').classList.contains('show')) return;
+      e.preventDefault();
+      vmZoom(e.deltaY < 0 ? 0.15 : -0.15);
+    }, { passive: false });
+  }
+});
+
+async function submitVerify() {
+  if (!vmCurrentLogId) return;
+  const btn = document.getElementById('vm-verify-btn');
+  const remarks = document.getElementById('vm-remarks').value;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+  const fd = new FormData();
+  fd.append('remarks', remarks);
+
+  try {
+    const res = await fetch(`/admin/verify/${vmCurrentLogId}`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Log verified!', 'success');
+      document.getElementById('vm-verify-label').textContent = 'Already Verified';
+      document.getElementById('vm-status').innerHTML = '<span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Verified</span>';
+      setTimeout(() => { closeVerifyModal(); location.reload(); }, 1200);
+    }
+  } catch(e) {
+    showToast('Error verifying.', 'danger');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-shield-check"></i> Mark as Verified';
+  }
+}
+
+async function verifyAll(logIds, btn) {
+  if (!confirm(`Verify all ${logIds.length} logs for this intern?`)) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+  let allOk = true;
+  for (const id of logIds) {
+    try {
+      const fd = new FormData();
+      const res = await fetch(`/admin/verify/${id}`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.success) allOk = false;
+    } catch(e) { allOk = false; }
+  }
+
+  if (allOk) {
+    showToast('All logs verified!', 'success');
+    setTimeout(() => location.reload(), 1000);
+  } else {
+    showToast('Some logs could not be verified.', 'warning');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Verify All';
+  }
+}
+
+async function deleteLog(logId, btn) {
+  if (!confirm('Delete this log entry?')) return;
+  btn.disabled = true;
+  const res = await fetch(`/admin/attendance/delete/${logId}`, { method: 'POST' });
+  const data = await res.json();
+  if (data.success) {
+    showToast('Log deleted.', 'success');
+    setTimeout(() => location.reload(), 800);
+  }
+}
+
+function applyFilters() {
+  const search = document.getElementById('search-name').value.toLowerCase();
+  const unit = document.getElementById('filter-unit').value;
+  const status = document.getElementById('filter-status').value;
+  const sort = document.getElementById('filter-sort').value;
+
+  const tbody = document.querySelector('table tbody');
+  let rows = Array.from(tbody.querySelectorAll('tr'));
+
+  // Filter
+  rows.forEach(row => {
+    const name = row.dataset.name || '';
+    const rowUnit = row.dataset.unit || '';
+    const rowStatus = row.dataset.status || '';
+    const matchSearch = !search || name.includes(search);
+    const matchUnit = !unit || rowUnit === unit;
+    const matchStatus = !status || rowStatus === status;
+    row.style.display = (matchSearch && matchUnit && matchStatus) ? '' : 'none';
+  });
+
+  // Sort visible rows
+  const visible = rows.filter(r => r.style.display !== 'none');
+  visible.sort((a, b) => {
+    if (sort === 'alpha-asc') return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+    if (sort === 'alpha-desc') return (b.dataset.name || '').localeCompare(a.dataset.name || '');
+    if (sort === 'time-asc') return (a.dataset.time || '').localeCompare(b.dataset.time || '');
+    if (sort === 'time-desc') return (b.dataset.time || '').localeCompare(a.dataset.time || '');
+    return 0;
+  });
+  visible.forEach(row => tbody.appendChild(row));
+
+  document.getElementById('filter-count').textContent = `Showing ${visible.length} of ${rows.length}`;
+}
+
+function resetFilters() {
+  document.getElementById('search-name').value = '';
+  document.getElementById('filter-unit').value = '';
+  document.getElementById('filter-status').value = '';
+  document.getElementById('filter-sort').value = 'alpha-asc';
+  applyFilters();
+}
+
+document.addEventListener('DOMContentLoaded', applyFilters);
+</script>
+{% endblock %}

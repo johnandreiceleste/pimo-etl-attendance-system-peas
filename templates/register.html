@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Register — PIMO-ETL DTR{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+  <div class="auth-bg-pattern"></div>
+  <div class="auth-box">
+    <div class="auth-header">
+      <div class="auth-logo"><i class="fa-solid fa-user-plus"></i></div>
+      <div class="auth-title">Intern Registration</div>
+      <div class="auth-subtitle">PIMO ETL ATTENDANCE SYSTEM</div>
+    </div>
+    <div class="auth-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <i class="fa-solid fa-{% if category == 'success' %}circle-check{% else %}circle-xmark{% endif %}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('register') }}">
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">First Name <span style="color:var(--danger)">*</span></label>
+            <input type="text" name="first_name" class="form-control" placeholder="Juan" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name <span style="color:var(--danger)">*</span></label>
+            <input type="text" name="last_name" class="form-control" placeholder="dela Cruz" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Middle Name</label>
+            <input type="text" name="middle_name" class="form-control" placeholder="Santos">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Unit / Division <span style="color:var(--danger)">*</span></label>
+          <select name="unit" class="form-control" required>
+            <option value="" disabled selected>— Select your unit —</option>
+            {% for unit in units %}
+            <option value="{{ unit }}">{{ unit }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address <span style="color:var(--danger)">*</span></label>
+          <input type="email" name="email" class="form-control" placeholder="yourname@email.com" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Password <span style="color:var(--danger)">*</span></label>
+            <div class="password-input-container">
+              <input type="password" name="password" id="password" class="form-control" placeholder="Min. 6 characters" required minlength="6">
+              <i class="fa-solid fa-eye password-toggle" id="password-toggle" onclick="togglePassword()"></i>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password <span style="color:var(--danger)">*</span></label>
+            <div class="password-input-container">
+              <input type="password" name="confirm_password" id="confirm-password" class="form-control" placeholder="Re-enter password" required>
+              <i class="fa-solid fa-eye password-toggle" id="confirm-password-toggle" onclick="toggleConfirmPassword()"></i>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;">
+          <i class="fa-solid fa-user-check"></i> Create Account
+        </button>
+      </form>
+    </div>
+    <div class="auth-footer">
+      Already registered? <a href="{{ url_for('login') }}">Sign in here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard — PIMO-ETL{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card navy">
+    <div class="stat-icon" style="color:var(--navy)"><i class="fa-solid fa-users"></i></div>
+    <div class="stat-value">{{ total_interns }}</div>
+    <div class="stat-label">Total Interns</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon" style="color:var(--teal)"><i class="fa-solid fa-clock"></i></div>
+    <div class="stat-value">{{ today_logs }}</div>
+    <div class="stat-label">Today's Logs</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-icon" style="color:var(--gold)"><i class="fa-solid fa-hourglass-half"></i></div>
+    <div class="stat-value">{{ unverified }}</div>
+    <div class="stat-label">Pending Verification</div>
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-icon" style="color:var(--danger)"><i class="fa-solid fa-calendar-day"></i></div>
+    <div class="stat-value">{{ today.strftime('%b %d') }}</div>
+    <div class="stat-label">Today's Date</div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-bolt" style="color:var(--gold)"></i> Quick Actions</span>
+  </div>
+  <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+    <a href="{{ url_for('admin_attendance') }}" class="btn btn-primary" style="text-decoration:none;">
+      <i class="fa-solid fa-calendar-check"></i> Today's Attendance
+    </a>
+    <a href="{{ url_for('export_csv') }}?date={{ today.isoformat() }}" class="btn" style="background:var(--success);color:white;text-decoration:none;">
+      <i class="fa-solid fa-file-csv"></i> Export Today CSV
+    </a>
+    <a href="{{ url_for('export_pdf') }}?date={{ today.isoformat() }}" class="btn" style="background:var(--danger);color:white;text-decoration:none;">
+      <i class="fa-solid fa-file-pdf"></i> Export Today PDF
+    </a>
+    <a href="{{ url_for('admin_users') }}" class="btn" style="background:var(--navy);color:white;text-decoration:none;">
+      <i class="fa-solid fa-users"></i> Manage Interns
+    </a>
+  </div>
+</div>
+
+<!-- Recent Logs -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-list" style="color:var(--teal)"></i> Recent Logs</span>
+  </div>
+  {% if recent_logs %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Intern</th>
+          <th>Unit</th>
+          <th>Date</th>
+          <th>Session</th>
+          <th>Action</th>
+          <th>Time</th>
+          <th>Status</th>
+          <th>Verified</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td><strong>{{ log.user.full_name }}</strong></td>
+          <td><span class="badge badge-navy">{{ log.user.unit }}</span></td>
+          <td>{{ log.log_date.strftime('%b %d, %Y') }}</td>
+          <td><span class="badge {% if log.session_type == 'AM' %}badge-navy{% else %}badge-success{% endif %}">{{ log.session_type }}</span></td>
+          <td><span class="badge {% if log.action == 'IN' %}badge-success{% else %}badge-neutral{% endif %}">{{ log.action }}</span></td>
+          <td style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;">{{ log.timestamp.strftime('%I:%M %p') }}</td>
+          <td>
+            {% if log.is_late %}<span class="badge badge-danger">⚠ LATE</span>
+            {% else %}<span class="badge badge-success">✓ On Time</span>{% endif %}
+          </td>
+          <td>
+            {% if log.is_verified %}<span class="badge badge-success">Verified</span>
+            {% else %}<span class="badge badge-warning">Pending</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="no-data">
+    <i class="fa-solid fa-inbox"></i>
+    <p>No logs yet. Logs will appear here once interns start recording attendance.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

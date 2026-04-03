@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% block title %}My DTR — PIMO-ETL{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+
+{% block content %}
+<!-- Test Mode Toggle -->
+<!-- <form method="POST" action="{{ url_for('intern_toggle_test_mode') }}" style="margin-bottom:12px;">
+  <button type="submit" class="btn" style="background:{% if session.get('test_mode') %}#f59e0b{% else %}#6b7b9a{% endif %};color:white;font-size:13px;padding:8px 16px;">
+    <i class="fa-solid fa-flask"></i>
+    {% if session.get('test_mode') %}🟡 TEST MODE ON — Click to disable{% else %}⚪ Enable Test Mode{% endif %}
+  </button>
+</form> -->
+
+{% if not monday and not session.get('test_mode') %}
+<div class="alert alert-info">
+  <i class="fa-solid fa-circle-info"></i>
+  <div>
+    <strong>Attendance is only recorded on Mondays.</strong>
+    Today is {{ today.strftime('%A, %B %d, %Y') }}. Come back next Monday!
+  </div>
+</div>
+{% endif %}
+
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 60%,var(--teal) 100%);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-md);overflow:hidden;position:relative;">
+  <div style="position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
+  <div style="position:absolute;right:60px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.04);"></div>
+  <div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:white;">
+      Good {% if now.hour < 12 %}Morning{% elif now.hour < 17 %}Afternoon{% else %}Evening{% endif %}, {{ current_user.first_name }}!
+    </div>
+    <div style="color:rgba(255,255,255,0.7);font-size:13px;margin-top:4px;">
+      {{ today.strftime('%A, %B %d, %Y') }} &nbsp;·&nbsp; {{ current_user.unit }} Unit
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:10px 16px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;">Status</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:{% if monday %}#4ade80{% else %}#94a3b8{% endif %};">
+        {% if monday %}🟢 MONDAY{% else %}⚪ NOT MONDAY{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DTR Cards -->
+<div class="dtr-grid">
+  <!-- AM Session -->
+  <div class="dtr-session">
+    <div class="session-header am">
+      <div>
+        <div class="session-title">🌤 Morning Session</div>
+        <div class="session-subtitle">Time In by 8:00 AM · Time Out from 12:00 PM</div>
+      </div>
+    </div>
+    <div class="session-body">
+      <!-- AM In -->
+      <div class="dtr-action">
+        <div class="dtr-action-info">
+          <div class="dtr-action-label">Time In</div>
+          {% if status.AM_IN %}
+            <div class="dtr-action-time {{ 'late' if status.AM_IN.is_late else '' }}">
+              {{ status.AM_IN.timestamp.strftime('%I:%M:%S %p') }}
+              {% if status.AM_IN.is_late %}<span class="badge badge-danger" style="font-size:10px;margin-left:4px;">LATE</span>{% endif %}
+            </div>
+          {% else %}
+            <div class="dtr-action-time pending">Not yet logged</div>
+          {% endif %}
+        </div>
+        {% if status.AM_IN %}
+          <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
+        {% else %}
+          <button class="btn-dtr in" onclick="openCamera('AM','IN')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+            <i class="fa-solid fa-camera"></i> Time In
+          </button>
+        {% endif %}
+      </div>
+
+      <div style="border-top:1px dashed var(--border);margin:4px 0;"></div>
+
+      <!-- AM Out -->
+      <div class="dtr-action">
+        <div class="dtr-action-info">
+          <div class="dtr-action-label">Time Out</div>
+          {% if status.AM_OUT %}
+            <div class="dtr-action-time">{{ status.AM_OUT.timestamp.strftime('%I:%M:%S %p') }}</div>
+          {% else %}
+            <div class="dtr-action-time pending">Not yet logged</div>
+          {% endif %}
+        </div>
+        {% if status.AM_OUT %}
+          <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
+        {% else %}
+          <button class="btn-dtr out" onclick="openCamera('AM','OUT')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+            <i class="fa-solid fa-camera"></i> Time Out
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- PM Session -->
+  <div class="dtr-session">
+    <div class="session-header pm">
+      <div>
+        <div class="session-title">🌆 Afternoon Session</div>
+        <div class="session-subtitle">Time In by 1:00 PM · Time Out from 5:00 PM</div>
+      </div>
+    </div>
+    <div class="session-body">
+      <!-- PM In -->
+      <div class="dtr-action">
+        <div class="dtr-action-info">
+          <div class="dtr-action-label">Time In</div>
+          {% if status.PM_IN %}
+            <div class="dtr-action-time {{ 'late' if status.PM_IN.is_late else '' }}">
+              {{ status.PM_IN.timestamp.strftime('%I:%M:%S %p') }}
+              {% if status.PM_IN.is_late %}<span class="badge badge-danger" style="font-size:10px;margin-left:4px;">LATE</span>{% endif %}
+            </div>
+          {% else %}
+            <div class="dtr-action-time pending">Not yet logged</div>
+          {% endif %}
+        </div>
+        {% if status.PM_IN %}
+          <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
+        {% else %}
+          <button class="btn-dtr in" onclick="openCamera('PM','IN')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+            <i class="fa-solid fa-camera"></i> Time In
+          </button>
+        {% endif %}
+      </div>
+
+      <div style="border-top:1px dashed var(--border);margin:4px 0;"></div>
+
+      <!-- PM Out -->
+      <div class="dtr-action">
+        <div class="dtr-action-info">
+          <div class="dtr-action-label">Time Out</div>
+          {% if status.PM_OUT %}
+            <div class="dtr-action-time">{{ status.PM_OUT.timestamp.strftime('%I:%M:%S %p') }}</div>
+          {% else %}
+            <div class="dtr-action-time pending">Not yet logged</div>
+          {% endif %}
+        </div>
+        {% if status.PM_OUT %}
+          <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
+        {% else %}
+          <button class="btn-dtr out" onclick="openCamera('PM','OUT')" {% if not monday and not session.get('test_mode') %}disabled{% endif %}>
+            <i class="fa-solid fa-camera"></i> Time Out
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Instructions -->
+<div class="card" style="margin-top:20px;">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-circle-info" style="color:var(--teal)"></i> How to Use</span>
+  </div>
+  <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);flex-shrink:0;"><i class="fa-solid fa-1"></i></div>
+      <div><div style="font-weight:600;font-size:13px;">Monday Only</div><div style="font-size:12px;color:var(--text-muted);">DTR logging is only active on Mondays for WFH setup.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:36px;height:36px;background:#d1fae5;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--success);flex-shrink:0;"><i class="fa-solid fa-2"></i></div>
+      <div><div style="font-weight:600;font-size:13px;">Camera Required</div><div style="font-size:12px;color:var(--text-muted);">Click the Time In/Out button to open your camera and take a live photo.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:36px;height:36px;background:#fef3c7;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--warning);flex-shrink:0;"><i class="fa-solid fa-3"></i></div>
+      <div><div style="font-weight:600;font-size:13px;">Punctuality Matters</div><div style="font-size:12px;color:var(--text-muted);">AM In after 8:00 AM or PM In after 1:00 PM will be marked LATE.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Camera Modal ─── -->
+<div class="modal-overlay" id="camera-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Capture Photo</div>
+    <div class="modal-sub" id="modal-sub">Allow camera access and position yourself clearly.</div>
+
+    <video id="camera-preview" autoplay playsinline muted></video>
+    <canvas id="capture-canvas"></canvas>
+
+    <div id="captured-preview" style="display:none;">
+      <img id="captured-img" style="width:100%;border-radius:10px;max-height:280px;object-fit:cover;">
+      <div style="margin-top:10px;padding:10px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;color:#065f46;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-circle-check"></i> Live photo captured. Click "Submit" to log your attendance.
+      </div>
+    </div>
+
+    <div class="camera-actions">
+      <button class="btn btn-secondary" onclick="closeCamera()"><i class="fa-solid fa-xmark"></i> Cancel</button>
+      <button class="btn btn-primary" id="capture-btn" onclick="capturePhoto()"><i class="fa-solid fa-camera"></i> Capture</button>
+      <button class="btn" id="retake-btn" style="display:none;background:var(--warning);color:white;" onclick="retakePhoto()"><i class="fa-solid fa-rotate-right"></i> Retake</button>
+      <button class="btn btn-primary" id="submit-btn" style="display:none;" onclick="submitLog()" disabled><i class="fa-solid fa-paper-plane"></i> Submit</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSession = '', currentAction = '';
+let stream = null, capturedBlob = null;
+
+const sessionLabels = {
+  'AM_IN': { title: '☀️ AM Time In', sub: 'Position yourself at your workstation. AM In must be before 8:00 AM.' },
+  'AM_OUT': { title: '🌤 AM Time Out', sub: 'Log out of your morning session.' },
+  'PM_IN': { title: '🌅 PM Time In', sub: 'Position yourself at your workstation. PM In must be before 1:00 PM.' },
+  'PM_OUT': { title: '🌆 PM Time Out', sub: 'Log out of your afternoon session.' },
+};
+
+async function openCamera(session, action) {
+  currentSession = session;
+  currentAction = action;
+  const key = `${session}_${action}`;
+  document.getElementById('modal-title').textContent = sessionLabels[key].title;
+  document.getElementById('modal-sub').textContent = sessionLabels[key].sub;
+
+  resetCameraUI();
+  document.getElementById('camera-modal').classList.add('show');
+
+  try {
+    const constraints = {
+      video: {
+        facingMode: 'user',
+        width: { ideal: 640 }, height: { ideal: 480 }
+      }
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const video = document.getElementById('camera-preview');
+    video.srcObject = stream;
+  } catch (err) {
+    showToast('Camera access denied. Please allow camera permissions.', 'danger');
+    closeCamera();
+  }
+}
+
+function resetCameraUI() {
+  document.getElementById('camera-preview').style.display = 'block';
+  document.getElementById('captured-preview').style.display = 'none';
+  document.getElementById('capture-btn').style.display = 'block';
+  document.getElementById('retake-btn').style.display = 'none';
+  document.getElementById('submit-btn').style.display = 'none';
+  document.getElementById('submit-btn').disabled = true;
+  capturedBlob = null;
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-preview');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+  capturedBlob = dataUrl;
+
+  document.getElementById('captured-img').src = dataUrl;
+  document.getElementById('captured-preview').style.display = 'block';
+  document.getElementById('camera-preview').style.display = 'none';
+  document.getElementById('capture-btn').style.display = 'none';
+  document.getElementById('retake-btn').style.display = 'block';
+  document.getElementById('submit-btn').style.display = 'block';
+  document.getElementById('submit-btn').disabled = false;
+}
+
+function retakePhoto() {
+  document.getElementById('camera-preview').style.display = 'block';
+  document.getElementById('captured-preview').style.display = 'none';
+  document.getElementById('capture-btn').style.display = 'block';
+  document.getElementById('retake-btn').style.display = 'none';
+  document.getElementById('submit-btn').style.display = 'none';
+  capturedBlob = null;
+}
+
+async function submitLog() {
+  if (!capturedBlob) return;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+
+  try {
+    const res = await fetch('/intern/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_type: currentSession,
+        action: currentAction,
+        photo: capturedBlob
+      })
+    });
+    const data = await res.json();
+    closeCamera();
+    if (data.success) {
+      showToast(data.message, data.is_late ? 'warning' : 'success');
+      setTimeout(() => location.reload(), 1800);
+    } else {
+      showToast(data.message, 'danger');
+    }
+  } catch(e) {
+    showToast('Network error. Please try again.', 'danger');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit';
+  }
+}
+
+function closeCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  document.getElementById('camera-modal').classList.remove('show');
+  resetCameraUI();
+}
+</script>
+{% endblock %}

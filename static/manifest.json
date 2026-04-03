@@ -1,0 +1,26 @@
+{
+  "name": "PIMO-ETL WFH DTR System",
+  "short_name": "PIMO DTR",
+  "description": "WFH Daily Time Record System for PIMO-ETL Interns",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d3b6e",
+  "theme_color": "#0d3b6e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "en-PH"
+}

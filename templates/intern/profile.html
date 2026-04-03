@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}My Profile — PIMO-ETL{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+  <!-- Edit Profile Info -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fa-solid fa-user" style="color:var(--teal)"></i> Personal Information</span>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('intern_profile') }}">
+        <input type="hidden" name="action" value="update_info">
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">First Name <span style="color:var(--danger)">*</span></label>
+            <input type="text" name="first_name" class="form-control" value="{{ current_user.first_name }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name <span style="color:var(--danger)">*</span></label>
+            <input type="text" name="last_name" class="form-control" value="{{ current_user.last_name }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Middle Name</label>
+            <input type="text" name="middle_name" class="form-control" value="{{ current_user.middle_name or '' }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" value="{{ current_user.email }}" disabled style="opacity:0.6;cursor:not-allowed;">
+          <small style="color:var(--text-muted);font-size:11px;">Email cannot be changed.</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit / Division <span style="color:var(--danger)">*</span></label>
+          <select name="unit" class="form-control" required>
+            {% for unit in units %}
+            <option value="{{ unit }}" {% if unit == current_user.unit %}selected{% endif %}>{{ unit }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Member Since</label>
+          <input type="text" class="form-control" value="{{ current_user.created_at.strftime('%B %d, %Y') }}" disabled style="opacity:0.6;cursor:not-allowed;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:11px;">
+          <i class="fa-solid fa-floppy-disk"></i> Save Changes
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Password Change Request -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-lock" style="color:var(--gold)"></i> Change Password</span>
+      </div>
+      <div class="card-body">
+        {% if pending_request %}
+          <div class="alert alert-info">
+            <i class="fa-solid fa-hourglass-half"></i>
+            <div>
+              <strong>Request Pending</strong><br>
+              <span style="font-size:13px;">Submitted {{ pending_request.created_at.strftime('%b %d, %Y %I:%M %p') }}. Waiting for admin approval.</span>
+            </div>
+          </div>
+        {% else %}
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+            Password changes require admin approval. Enter your desired new password and an optional reason.
+          </p>
+          <form method="POST" action="{{ url_for('intern_profile') }}">
+            <input type="hidden" name="action" value="request_password">
+            <div class="form-group">
+              <label class="form-label">New Password <span style="color:var(--danger)">*</span></label>
+              <input type="password" name="new_password" class="form-control" placeholder="Min. 6 characters" required minlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password <span style="color:var(--danger)">*</span></label>
+              <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter password" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reason <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+              <textarea name="reason" class="form-control" rows="2" placeholder="e.g. Forgot current password..."></textarea>
+            </div>
+            <button type="submit" class="btn" style="background:var(--gold);color:var(--navy);width:100%;padding:11px;font-weight:700;">
+              <i class="fa-solid fa-paper-plane"></i> Submit Request
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Request History -->
+    {% if past_requests %}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--teal)"></i> Request History</span>
+      </div>
+      <div style="padding:0;">
+        {% for req in past_requests %}
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <div style="font-size:12px;color:var(--text-muted);">{{ req.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+            {% if req.reason %}<div style="font-size:13px;margin-top:2px;">{{ req.reason }}</div>{% endif %}
+            {% if req.admin_note %}<div style="font-size:12px;color:var(--teal);margin-top:2px;"><i class="fa-solid fa-comment"></i> {{ req.admin_note }}</div>{% endif %}
+          </div>
+          <div style="flex-shrink:0;">
+            {% if req.status == 'pending' %}
+              <span class="badge badge-warning">Pending</span>
+            {% elif req.status == 'approved' %}
+              <span class="badge badge-success"><i class="fa-solid fa-check"></i> Approved</span>
+            {% else %}
+              <span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Denied</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+@media (max-width: 700px) {
+  div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}
