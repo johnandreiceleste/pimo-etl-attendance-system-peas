@@ -13,6 +13,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'pimo-etl-secret-dev-only')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///pimo_dtr.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
 app.config['REMEMBER_COOKIE_SECURE'] = os.environ.get('DATABASE_URL') is not None
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
@@ -215,7 +219,7 @@ def get_dtr_status(user_id, log_date):
 
 def check_late(session_type, action):
     """Returns True if the current time is past the allowed limit."""
-    now = datetime.now().time()
+    now = (datetime.utcnow() + timedelta(hours=8)).time()
     if session_type == 'AM' and action == 'IN':
         return now > time(8, 0)
     if session_type == 'PM' and action == 'IN':
@@ -232,7 +236,7 @@ def is_monday():
 
 def can_log(session_type, action):
     """Check if logging is currently allowed."""
-    now = datetime.now().time()
+    now = (datetime.utcnow() + timedelta(hours=8)).time()
     if not is_monday():
         return False, "Attendance is only recorded on Mondays."
     if session_type == 'AM':
@@ -379,7 +383,7 @@ def intern_log():
     log = DTRLog(
         user_id=current_user.id, log_date=today,
         session_type=session_type, action=action,
-        timestamp=datetime.now(), photo_path=photo_path,
+        timestamp=datetime.utcnow() + timedelta(hours=8), photo_path=photo_path,
         is_late=is_late
     )
     db.session.add(log)
