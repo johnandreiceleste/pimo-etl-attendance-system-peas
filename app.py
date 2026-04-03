@@ -689,10 +689,8 @@ def api_status():
 #for test mode
 @app.route('/intern/toggle-test-mode', methods=['POST'])
 @login_required
-@login_required
 def intern_toggle_test_mode():
     session['test_mode'] = not session.get('test_mode', False)
-    # redirect back to wherever they came from
     return redirect(request.referrer or url_for('admin_dashboard'))
 
 @app.route('/admin/attendance/delete/<int:log_id>', methods=['POST'])
