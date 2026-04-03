@@ -502,8 +502,8 @@ tbody tr:hover { background: #f4f7fb; }
         <span style="margin-left:auto;background:var(--danger);color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;">{{ pw_pending }}</span>
       {% endif %}
     </a>
-    <form method="POST" action="{{ url_for('intern_toggle_test_mode') }}" style="margin: 0; padding: 0;">
-      <button type="submit" style="...background:{% if test_mode %}#f59e0b{% else %}rgba(255,255,255,0.08){% endif %}...">
+    <form method="POST" action="{{ url_for('intern_toggle_test_mode') }}" style="margin:0;padding:0 0 2px 0;">
+      <button type="submit" class="nav-link" style="width:100%;background:{% if test_mode %}rgba(245,158,11,0.2){% else %}transparent{% endif %};border:none;cursor:pointer;text-align:left;color:{% if test_mode %}#f5a623{% else %}rgba(255,255,255,0.7){% endif %};">
         <i class="fa-solid fa-flask"></i>
         {% if test_mode %}🟡 Test Mode ON{% else %}⚪ Test Mode{% endif %}
       </button>
