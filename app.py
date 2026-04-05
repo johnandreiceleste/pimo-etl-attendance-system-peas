@@ -25,6 +25,12 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
 SUPABASE_BUCKET = 'dtr-photos'
 
+def pht_now():
+    return datetime.utcnow() + timedelta(hours=8)
+
+def pht_today():
+    return (datetime.utcnow() + timedelta(hours=8)).date()
+
 
 db = SQLAlchemy(app)
 @app.context_processor
@@ -183,7 +189,7 @@ def save_photo(base64_data, user_id, log_type):
         img.save(buf, 'JPEG', quality=75)
         buf.seek(0)
 
-        fname = f"{user_id}_{log_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        fname = f"{user_id}_{log_type}_{pht_now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
         url = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{fname}"
         headers = {
@@ -231,7 +237,7 @@ def check_late(session_type, action):
 def is_monday():
     if get_config('test_mode') == 'true':
         return True
-    return date.today().weekday() == 0
+    return pht_today().weekday() == 0
 
 
 def can_log(session_type, action):
@@ -341,10 +347,10 @@ def logout():
 @login_required
 @intern_required
 def intern_dashboard():
-    today = date.today()
+    today = pht_today()
     status = get_dtr_status(current_user.id, today)
     monday = is_monday()
-    now = datetime.now()
+    now = pht_now()
     return render_template('intern/dashboard.html',
                            status=status, today=today,
                            monday=monday, now=now)
@@ -366,7 +372,7 @@ def intern_log():
     if not ok:
         return jsonify({'success': False, 'message': msg})
 
-    today = date.today()
+    today = pht_today()
     existing = DTRLog.query.filter_by(
         user_id=current_user.id, log_date=today,
         session_type=session_type, action=action
@@ -471,7 +477,7 @@ def intern_profile():
 @admin_required
 def admin_dashboard():
     total_interns = User.query.filter_by(is_admin=False).count()
-    today = date.today()
+    today = pht_today()
     today_logs = DTRLog.query.filter_by(log_date=today).count()
     unverified = DTRLog.query.filter_by(log_date=today, is_verified=False).count()
     recent_logs = DTRLog.query.order_by(DTRLog.timestamp.desc()).limit(10).all()
@@ -510,11 +516,11 @@ def admin_delete_user(uid):
 @login_required
 @admin_required
 def admin_attendance():
-    selected_date_str = request.args.get('date', date.today().isoformat())
+    selected_date_str = request.args.get('date', pht_today().isoformat())
     try:
         selected_date = date.fromisoformat(selected_date_str)
     except ValueError:
-        selected_date = date.today()
+        selected_date = pht_today()
 
     users = User.query.filter_by(is_admin=False).order_by(User.last_name).all()
     attendance = {}
@@ -591,11 +597,11 @@ def admin_remarks(log_id):
 @login_required
 @admin_required
 def export_csv():
-    selected_date_str = request.args.get('date', date.today().isoformat())
+    selected_date_str = request.args.get('date', pht_today().isoformat())
     try:
         selected_date = date.fromisoformat(selected_date_str)
     except ValueError:
-        selected_date = date.today()
+        selected_date = pht_today()
 
     users = User.query.filter_by(is_admin=False).order_by(User.last_name).all()
     output = io.StringIO()
@@ -635,11 +641,11 @@ def export_pdf():
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.units import cm
 
-    selected_date_str = request.args.get('date', date.today().isoformat())
+    selected_date_str = request.args.get('date', pht_today().isoformat())
     try:
         selected_date = date.fromisoformat(selected_date_str)
     except ValueError:
-        selected_date = date.today()
+        selected_date = pht_today()
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
@@ -649,7 +655,7 @@ def export_pdf():
     elements = []
 
     elements.append(Paragraph('PIMO-ETL WFH Daily Time Record', styles['Title']))
-    elements.append(Paragraph(f'Date: {selected_date.strftime("%B %d, %Y")} | Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}', styles['Normal']))
+    elements.append(Paragraph(f'Date: {selected_date.strftime("%B %d, %Y")} | Generated: {pht_now().strftime("%Y-%m-%d %H:%M")}', styles['Normal']))
     elements.append(Spacer(1, 0.5*cm))
 
     headers = ['Name', 'Unit', 'AM In', 'Late', 'AM Out', 'PM In', 'Late', 'PM Out', 'Verified', 'Remarks']
@@ -696,7 +702,7 @@ def export_pdf():
 def api_status():
     if current_user.is_admin:
         return jsonify({'role': 'admin'})
-    today = date.today()
+    today = pht_today()
     status = get_dtr_status(current_user.id, today)
     result = {}
     for key, log in status.items():
@@ -710,7 +716,7 @@ def api_status():
         'role': 'intern',
         'is_monday': is_monday(),
         'status': result,
-        'now': datetime.now().strftime('%H:%M:%S')
+        'now': pht_now().strftime('%H:%M:%S')
     })
 
 #for test mode
@@ -769,7 +775,7 @@ def intern_export_pdf():
         elements.append(Paragraph(f'Date: {selected_date.strftime("%B %d, %Y")}', sub_style))
     else:
         elements.append(Paragraph('All Attendance Records', sub_style))
-    elements.append(Paragraph(f'Generated: {datetime.now().strftime("%B %d, %Y %I:%M %p")}', sub_style))
+    elements.append(Paragraph(f'Generated: {pht_now().strftime("%B %d, %Y %I:%M %p")}', sub_style))
     elements.append(Spacer(1, 0.5*cm))
 
     if logs:
