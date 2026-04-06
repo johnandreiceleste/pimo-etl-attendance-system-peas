@@ -147,7 +147,7 @@
     <!-- Unit -->
     <select id="filter-unit" class="form-control" style="max-width:160px;" onchange="applyFilters()">
       <option value="">All Units</option>
-      {% for unit in ['PROPERTY','OIM','ADRIS','LARIS','ASRIS','ENGINEERING','ADMINISTRATIVE','FINANCE','PLANNING','DESIGN','CONSTRUCTION','EQUIPMENT','IDU','SURVEY','CASHIERING','OTHER'] %}
+      {% for unit in ['ADMINISTRATIVE','ADRIS','ASRIS','CASHIERING','CONSTRUCTION','DESIGN','ENGINEERING','EQUIPMENT','FINANCE','IDU','LARIS','OIM','PLANNING','PROPERTY','SURVEY','OTHER'] %}
       <option value="{{ unit }}">{{ unit }}</option>
       {% endfor %}
     </select>

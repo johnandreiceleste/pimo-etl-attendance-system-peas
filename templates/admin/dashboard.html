@@ -27,6 +27,47 @@
   </div>
 </div>
 
+<!-- Attendance Summary -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <span class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--teal)"></i> Today's Attendance Summary</span>
+    <span style="font-size:12px;color:var(--text-muted);">{{ today.strftime('%A, %B %d, %Y') }}</span>
+  </div>
+  <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
+
+    <div style="text-align:center;padding:16px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;color:var(--success);">{{ present_count }}</div>
+      <div style="font-size:12px;font-weight:600;color:#065f46;text-transform:uppercase;letter-spacing:0.5px;">Present</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">out of {{ total_interns }}</div>
+    </div>
+
+    <div style="text-align:center;padding:16px;background:#fef2f2;border-radius:10px;border:1px solid #fca5a5;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;color:var(--danger);">{{ absent_count }}</div>
+      <div style="font-size:12px;font-weight:600;color:#991b1b;text-transform:uppercase;letter-spacing:0.5px;">Absent</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">no logs today</div>
+    </div>
+
+    <div style="text-align:center;padding:16px;background:#fef3c7;border-radius:10px;border:1px solid #fcd34d;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;color:var(--warning);">{{ late_count }}</div>
+      <div style="font-size:12px;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">Late</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">past cutoff</div>
+    </div>
+
+    <div style="text-align:center;padding:16px;background:#eff6ff;border-radius:10px;border:1px solid #93c5fd;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;color:var(--navy);">{{ on_time_count }}</div>
+      <div style="font-size:12px;font-weight:600;color:#1e40af;text-transform:uppercase;letter-spacing:0.5px;">On Time</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">before cutoff</div>
+    </div>
+
+    <div style="text-align:center;padding:16px;background:#f5f3ff;border-radius:10px;border:1px solid #c4b5fd;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:800;color:#7c3aed;">{{ unverified }}</div>
+      <div style="font-size:12px;font-weight:600;color:#5b21b6;text-transform:uppercase;letter-spacing:0.5px;">Unverified</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">pending review</div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Quick Actions -->
 <div class="card" style="margin-bottom:20px;">
   <div class="card-header">

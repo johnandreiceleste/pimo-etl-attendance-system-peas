@@ -19,7 +19,7 @@
   </div>
   <select id="u-unit" class="form-control" style="max-width:160px;" onchange="applyUserFilters()">
     <option value="">All Units</option>
-    {% for unit in ['PROPERTY','OIM','ADRIS','LARIS','ASRIS','ENGINEERING','ADMINISTRATIVE','FINANCE','PLANNING','DESIGN','CONSTRUCTION','EQUIPMENT','IDU','SURVEY','CASHIERING','OTHER'] %}
+    {% for unit in ['ADMINISTRATIVE','ADRIS','ASRIS','CASHIERING','CONSTRUCTION','DESIGN','ENGINEERING','EQUIPMENT','FINANCE','IDU','LARIS','OIM','PLANNING','PROPERTY','SURVEY','OTHER'] %}
     <option value="{{ unit }}">{{ unit }}</option>
     {% endfor %}
   </select>
@@ -93,13 +93,13 @@
   {% endif %}
 </div>
 
-<!-- Unit Summary -->
 {% if users %}
 <div class="card" style="margin-top:20px;">
   <div class="card-header">
-    <span class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--gold)"></i> By Unit</span>
+    <span class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--gold)"></i> Interns by Unit</span>
+    <span class="badge badge-navy">{{ users|length }} total</span>
   </div>
-  <div class="card-body" style="display:flex;flex-wrap:wrap;gap:10px;">
+  <div class="card-body">
     {% set unit_counts = {} %}
     {% for user in users %}
       {% if user.unit in unit_counts %}
@@ -108,12 +108,30 @@
         {% set _ = unit_counts.update({user.unit: 1}) %}
       {% endif %}
     {% endfor %}
-    {% for unit, count in unit_counts.items() %}
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:8px;">
-        <span class="badge badge-navy">{{ unit }}</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">{{ count }}</span>
+
+    {% set sorted_units = unit_counts.items()|sort(attribute='0') %}
+    {% set max_count = unit_counts.values()|max %}
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      {% for unit, count in sorted_units %}
+      <div style="display:flex;align-items:center;gap:12px;">
+        <!-- Unit label -->
+        <div style="width:120px;flex-shrink:0;font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;text-align:right;">
+          {{ unit }}
+        </div>
+        <!-- Bar -->
+        <div style="flex:1;background:var(--bg);border-radius:6px;height:28px;overflow:hidden;position:relative;">
+          <div style="height:100%;width:{{ (count / max_count * 100)|round }}%;background:linear-gradient(90deg,var(--navy),var(--teal));border-radius:6px;transition:width 0.6s ease;display:flex;align-items:center;padding-left:10px;min-width:28px;">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:white;">{{ count }}</span>
+          </div>
+        </div>
+        <!-- Count badge -->
+        <div style="width:32px;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--navy);text-align:left;">
+          {{ count }}
+        </div>
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endif %}

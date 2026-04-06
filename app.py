@@ -482,13 +482,31 @@ def admin_dashboard():
     unverified = DTRLog.query.filter_by(log_date=today, is_verified=False).count()
     recent_logs = DTRLog.query.order_by(DTRLog.timestamp.desc()).limit(10).all()
     pending_pw_requests = PasswordChangeRequest.query.filter_by(status='pending').count()
+
+    # Attendance summary
+    users = User.query.filter_by(is_admin=False).all()
+    present_today = set(
+        log.user_id for log in DTRLog.query.filter_by(log_date=today).all()
+    )
+    late_today = set(
+        log.user_id for log in DTRLog.query.filter_by(log_date=today, is_late=True).all()
+    )
+    present_count = len(present_today)
+    absent_count = total_interns - present_count
+    late_count = len(late_today)
+    on_time_count = present_count - late_count
+
     return render_template('admin/dashboard.html',
                            total_interns=total_interns,
                            today_logs=today_logs,
                            unverified=unverified,
                            recent_logs=recent_logs,
                            today=today,
-                           pending_pw_requests=pending_pw_requests)
+                           pending_pw_requests=pending_pw_requests,
+                           present_count=present_count,
+                           absent_count=absent_count,
+                           late_count=late_count,
+                           on_time_count=on_time_count)
 
 
 @app.route('/admin/users')
