@@ -227,9 +227,9 @@ def check_late(session_type, action):
     """Returns True if the current time is past the allowed limit."""
     now = (datetime.utcnow() + timedelta(hours=8)).time()
     if session_type == 'AM' and action == 'IN':
-        return now > time(8, 0)
+        return now > time(8, 1)
     if session_type == 'PM' and action == 'IN':
-        return now > time(13, 0)
+        return now > time(13, 1)
     return False
 
 
