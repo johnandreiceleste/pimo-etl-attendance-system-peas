@@ -25,7 +25,7 @@
   </select>
   <select id="u-status" class="form-control" style="max-width:160px;" onchange="applyUserFilters()">
     <option value="">All Status</option>
-    <option value="active">Active</option>
+    <option value="active" selected>Active</option>
     <option value="inactive">Inactive</option>
   </select>
   <select id="u-sort" class="form-control" style="max-width:180px;" onchange="applyUserFilters()">
@@ -212,7 +212,7 @@ function applyUserFilters() {
 function resetUserFilters() {
   document.getElementById('u-search').value = '';
   document.getElementById('u-unit').value = '';
-  document.getElementById('u-status').value = '';
+  document.getElementById('u-status').value = 'active';
   document.getElementById('u-sort').value = 'alpha-asc';
   applyUserFilters();
 }
