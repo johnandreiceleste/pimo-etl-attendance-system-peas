@@ -4,6 +4,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash, jso
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import inspect, text
 from datetime import datetime, date, time, timedelta
 from functools import wraps
 import os, base64, io, csv, json
@@ -70,6 +71,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     unit = db.Column(db.String(50), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    etl_intern_status = db.Column(db.String(20), nullable=False, default='inactive')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     dtr_logs = db.relationship('DTRLog', backref='user', lazy=True)
 
@@ -135,6 +137,26 @@ def set_config(key, value):
         c = SystemConfig(key=key, value=value)
         db.session.add(c)
     db.session.commit()
+
+
+def ensure_schema_updates():
+    inspector = inspect(db.engine)
+    if 'users' not in inspector.get_table_names():
+        return
+
+    user_columns = {column['name'] for column in inspector.get_columns('users')}
+    if 'etl_intern_status' not in user_columns:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN etl_intern_status "
+                "VARCHAR(20) NOT NULL DEFAULT 'inactive'"
+            ))
+    else:
+        User.query.filter(User.etl_intern_status.is_(None)).update(
+            {User.etl_intern_status: 'inactive'},
+            synchronize_session=False
+        )
+        db.session.commit()
 
 
 # ─── Login Manager ─────────────────────────────────────────────────────────────
@@ -223,6 +245,10 @@ def get_dtr_status(user_id, log_date):
     return status
 
 
+def active_interns_query():
+    return User.query.filter_by(is_admin=False, etl_intern_status='active')
+
+
 def check_late(session_type, action):
     """Returns True if the current time is past the allowed limit."""
     now = (datetime.utcnow() + timedelta(hours=8)).time()
@@ -233,34 +259,18 @@ def check_late(session_type, action):
     return False
 
 
-# Test mode stored in session
+def attendance_is_open():
+    return True
+
+
 def is_monday():
-    if get_config('test_mode') == 'true':
-        return True
-    return pht_today().weekday() == 0
+    return attendance_is_open()
 
 
 def can_log(session_type, action):
     """Check if logging is currently allowed."""
-    now = (datetime.utcnow() + timedelta(hours=8)).time()
-    if not is_monday():
-        return False, "Attendance is only recorded on Mondays."
-    if session_type == 'AM':
-        if action == 'IN':
-            return True, ""
-        if action == 'OUT':
-            if now >= time(12, 0):
-                return True, ""
-            return False, "AM Time Out is available from 12:00 PM."
-    if session_type == 'PM':
-        if action == 'IN':
-            if now >= time(12, 0):
-                return True, ""
-            return False, "PM Time In is available from 12:00 PM."
-        if action == 'OUT':
-            if now >= time(17, 0):
-                return True, ""
-            return False, "PM Time Out is available from 5:00 PM."
+    if session_type in ('AM', 'PM') and action in ('IN', 'OUT'):
+        return True, ""
     return False, "Invalid log type."
 
 
@@ -456,6 +466,15 @@ def intern_profile():
                     db.session.commit()
                     flash('Password change request submitted. Waiting for admin approval.', 'success')
 
+        elif action == 'set_intern_status':
+            status = request.form.get('status')
+            if status not in ('active', 'inactive'):
+                flash('Invalid ETL/intern status.', 'danger')
+            else:
+                current_user.etl_intern_status = status
+                db.session.commit()
+                flash(f'Your ETL/intern status is now {status}.', 'success')
+
         return redirect(url_for('intern_profile'))
 
     pending_request = PasswordChangeRequest.query.filter_by(
@@ -476,20 +495,22 @@ def intern_profile():
 @login_required
 @admin_required
 def admin_dashboard():
-    total_interns = User.query.filter_by(is_admin=False).count()
+    active_user_ids = [user.id for user in active_interns_query().all()]
+    total_interns = len(active_user_ids)
     today = pht_today()
-    today_logs = DTRLog.query.filter_by(log_date=today).count()
-    unverified = DTRLog.query.filter_by(log_date=today, is_verified=False).count()
-    recent_logs = DTRLog.query.order_by(DTRLog.timestamp.desc()).limit(10).all()
+    today_logs_query = DTRLog.query.filter(DTRLog.log_date == today, DTRLog.user_id.in_(active_user_ids))
+    today_logs = today_logs_query.count()
+    unverified = today_logs_query.filter_by(is_verified=False).count()
+    recent_logs = DTRLog.query.filter(DTRLog.user_id.in_(active_user_ids))\
+                              .order_by(DTRLog.timestamp.desc()).limit(10).all()
     pending_pw_requests = PasswordChangeRequest.query.filter_by(status='pending').count()
 
     # Attendance summary
-    users = User.query.filter_by(is_admin=False).all()
     present_today = set(
-        log.user_id for log in DTRLog.query.filter_by(log_date=today).all()
+        log.user_id for log in today_logs_query.all()
     )
     late_today = set(
-        log.user_id for log in DTRLog.query.filter_by(log_date=today, is_late=True).all()
+        log.user_id for log in today_logs_query.filter_by(is_late=True).all()
     )
     present_count = len(present_today)
     absent_count = total_interns - present_count
@@ -530,6 +551,22 @@ def admin_delete_user(uid):
     return redirect(url_for('admin_users'))
 
 
+@app.route('/admin/users/status/<int:uid>', methods=['POST'])
+@login_required
+@admin_required
+def admin_set_user_status(uid):
+    user = User.query.get_or_404(uid)
+    status = request.form.get('status')
+    if status not in ('active', 'inactive'):
+        flash('Invalid ETL/intern status.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user.etl_intern_status = status
+    db.session.commit()
+    flash(f'{user.full_name} is now {status}.', 'success')
+    return redirect(url_for('admin_users'))
+
+
 @app.route('/admin/attendance')
 @login_required
 @admin_required
@@ -540,7 +577,7 @@ def admin_attendance():
     except ValueError:
         selected_date = pht_today()
 
-    users = User.query.filter_by(is_admin=False).order_by(User.last_name).all()
+    users = active_interns_query().order_by(User.last_name).all()
     attendance = {}
     for user in users:
         attendance[user.id] = get_dtr_status(user.id, selected_date)
@@ -621,7 +658,7 @@ def export_csv():
     except ValueError:
         selected_date = pht_today()
 
-    users = User.query.filter_by(is_admin=False).order_by(User.last_name).all()
+    users = active_interns_query().order_by(User.last_name).all()
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Date', 'Full Name', 'Unit', 'AM In', 'AM In Late', 'AM Out',
@@ -678,7 +715,7 @@ def export_pdf():
 
     headers = ['Name', 'Unit', 'AM In', 'Late', 'AM Out', 'PM In', 'Late', 'PM Out', 'Verified', 'Remarks']
     data = [headers]
-    users = User.query.filter_by(is_admin=False).order_by(User.last_name).all()
+    users = active_interns_query().order_by(User.last_name).all()
 
     for user in users:
         s = get_dtr_status(user.id, selected_date)
@@ -858,6 +895,7 @@ def intern_export_pdf():
 with app.app_context():
     try:
         db.create_all()
+        ensure_schema_updates()
     except Exception as e:
         print(f"DB init warning: {e}")
 

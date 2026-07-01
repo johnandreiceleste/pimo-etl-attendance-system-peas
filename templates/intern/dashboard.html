@@ -11,16 +11,6 @@
   </button>
 </form> -->
 
-{% if not monday and not test_mode %}
-<div class="alert alert-info">
-  <i class="fa-solid fa-circle-info"></i>
-  <div>
-    <strong>Attendance is only recorded on Mondays.</strong>
-    Today is {{ today.strftime('%A, %B %d, %Y') }}. Come back next Monday!
-  </div>
-</div>
-{% endif %}
-
 <!-- Welcome Banner -->
 <div style="background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 60%,var(--teal) 100%);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-md);overflow:hidden;position:relative;">
   <div style="position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
@@ -36,8 +26,8 @@
   <div style="text-align:right;">
     <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:10px 16px;">
       <div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;">Status</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:{% if monday %}#4ade80{% else %}#94a3b8{% endif %};">
-        {% if monday %}🟢 MONDAY{% else %}⚪ NOT MONDAY{% endif %}
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#4ade80;">
+        OPEN TODAY
       </div>
     </div>
   </div>
@@ -50,7 +40,7 @@
     <div class="session-header am">
       <div>
         <div class="session-title">🌤 Morning Session</div>
-        <div class="session-subtitle">Time In by 8:00 AM · Time Out from 12:00 PM</div>
+        <div class="session-subtitle">Expected Time In by 8:00 AM · Time Out anytime</div>
       </div>
     </div>
     <div class="session-body">
@@ -70,7 +60,7 @@
         {% if status.AM_IN %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr in" onclick="openCamera('AM','IN')" {% if not monday and not test_mode %}disabled{% endif %}>
+          <button class="btn-dtr in" onclick="openCamera('AM','IN')">
             <i class="fa-solid fa-camera"></i> Time In
           </button>
         {% endif %}
@@ -91,7 +81,7 @@
         {% if status.AM_OUT %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr out" onclick="openCamera('AM','OUT')" {% if not monday and not test_mode %}disabled{% endif %}>
+          <button class="btn-dtr out" onclick="openCamera('AM','OUT')">
             <i class="fa-solid fa-camera"></i> Time Out
           </button>
         {% endif %}
@@ -104,7 +94,7 @@
     <div class="session-header pm">
       <div>
         <div class="session-title">🌆 Afternoon Session</div>
-        <div class="session-subtitle">Time In by 1:00 PM · Time out is available from 5:00 PM</div>
+        <div class="session-subtitle">Expected Time In by 1:00 PM · Time Out anytime</div>
       </div>
     </div>
     <div class="session-body">
@@ -124,7 +114,7 @@
         {% if status.PM_IN %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr in" onclick="openCamera('PM','IN')" {% if not monday and not test_mode %}disabled{% endif %}>
+          <button class="btn-dtr in" onclick="openCamera('PM','IN')">
             <i class="fa-solid fa-camera"></i> Time In
           </button>
         {% endif %}
@@ -145,7 +135,7 @@
         {% if status.PM_OUT %}
           <button class="btn-dtr done" disabled><i class="fa-solid fa-check"></i> Done</button>
         {% else %}
-          <button class="btn-dtr out" onclick="openCamera('PM','OUT')" {% if not monday and not test_mode %}disabled{% endif %}>
+          <button class="btn-dtr out" onclick="openCamera('PM','OUT')">
             <i class="fa-solid fa-camera"></i> Time Out
           </button>
         {% endif %}
@@ -162,7 +152,7 @@
   <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
     <div style="display:flex;gap:12px;align-items:flex-start;">
       <div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);flex-shrink:0;"><i class="fa-solid fa-1"></i></div>
-      <div><div style="font-weight:600;font-size:13px;">Monday Only</div><div style="font-size:12px;color:var(--text-muted);">DTR logging is only active on Mondays for WFH setup.</div></div>
+      <div><div style="font-weight:600;font-size:13px;">Available Daily</div><div style="font-size:12px;color:var(--text-muted);">DTR logging is open every day for attendance tracking.</div></div>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-start;">
       <div style="width:36px;height:36px;background:#d1fae5;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--success);flex-shrink:0;"><i class="fa-solid fa-2"></i></div>

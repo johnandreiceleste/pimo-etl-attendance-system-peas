@@ -44,9 +44,36 @@
           <label class="form-label">Member Since</label>
           <input type="text" class="form-control" value="{{ current_user.created_at.strftime('%B %d, %Y') }}" disabled style="opacity:0.6;cursor:not-allowed;">
         </div>
+        <div class="form-group">
+          <label class="form-label">ETL/Intern Status</label>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+            {% if current_user.etl_intern_status == 'active' %}
+              <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Active</span>
+              <span style="font-size:12px;color:var(--text-muted);">Included in admin attendance tracking.</span>
+            {% else %}
+              <span class="badge badge-neutral"><i class="fa-solid fa-circle-pause"></i> Inactive</span>
+              <span style="font-size:12px;color:var(--text-muted);">Activate when you are ready to be tracked.</span>
+            {% endif %}
+          </div>
+        </div>
         <button type="submit" class="btn btn-primary" style="width:100%;padding:11px;">
           <i class="fa-solid fa-floppy-disk"></i> Save Changes
         </button>
+      </form>
+      <form method="POST" action="{{ url_for('intern_profile') }}" style="margin-top:10px;">
+        <input type="hidden" name="action" value="set_intern_status">
+        {% if current_user.etl_intern_status == 'active' %}
+          <input type="hidden" name="status" value="inactive">
+          <button type="submit" class="btn btn-danger" style="width:100%;padding:11px;"
+                  onclick="return confirm('Do you want to deactivate your ETL/intern status? You will no longer appear in admin attendance tracking.')">
+            <i class="fa-solid fa-user-slash"></i> Deactivate ETL/Intern Status
+          </button>
+        {% else %}
+          <input type="hidden" name="status" value="active">
+          <button type="submit" class="btn" style="width:100%;padding:11px;background:var(--success);color:white;">
+            <i class="fa-solid fa-user-check"></i> Activate ETL/Intern Status
+          </button>
+        {% endif %}
       </form>
     </div>
   </div>

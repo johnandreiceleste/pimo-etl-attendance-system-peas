@@ -23,6 +23,11 @@
     <option value="{{ unit }}">{{ unit }}</option>
     {% endfor %}
   </select>
+  <select id="u-status" class="form-control" style="max-width:160px;" onchange="applyUserFilters()">
+    <option value="">All Status</option>
+    <option value="active">Active</option>
+    <option value="inactive">Inactive</option>
+  </select>
   <select id="u-sort" class="form-control" style="max-width:180px;" onchange="applyUserFilters()">
     <option value="alpha-asc">Name A → Z</option>
     <option value="alpha-desc">Name Z → A</option>
@@ -44,6 +49,7 @@
           <th>Full Name</th>
           <th>Email</th>
           <th>Unit</th>
+          <th>ETL/Intern Status</th>
           <th>Registered</th>
           <th>Total Logs</th>
           <th>Action</th>
@@ -53,6 +59,7 @@
         {% for user in users %}
         <tr data-name="{{ user.last_name|lower }} {{ user.first_name|lower }} {{ user.email|lower }}"
         data-unit="{{ user.unit }}"
+        data-status="{{ user.etl_intern_status }}"
         data-date="{{ user.created_at.strftime('%Y%m%d%H%M%S') }}"
         data-logs="{{ user.dtr_logs|length }}">
           <td style="color:var(--text-muted);font-size:13px;">{{ loop.index }}</td>
@@ -68,17 +75,41 @@
           </td>
           <td style="font-size:13px;color:var(--text-muted);">{{ user.email }}</td>
           <td><span class="badge badge-navy">{{ user.unit }}</span></td>
+          <td>
+            {% if user.etl_intern_status == 'active' %}
+              <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Active</span>
+            {% else %}
+              <span class="badge badge-neutral"><i class="fa-solid fa-circle-pause"></i> Inactive</span>
+            {% endif %}
+          </td>
           <td style="font-size:13px;color:var(--text-muted);">{{ user.created_at.strftime('%b %d, %Y') }}</td>
           <td style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">
             {{ user.dtr_logs|length }}
           </td>
           <td>
-            <form method="POST" action="{{ url_for('admin_delete_user', uid=user.id) }}"
-                  onsubmit="return confirm('Delete {{ user.full_name }}? This will remove all their logs too.')">
-              <button type="submit" class="btn btn-danger" style="font-size:12px;padding:6px 14px;">
-                <i class="fa-solid fa-trash"></i> Delete
-              </button>
-            </form>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <form method="POST" action="{{ url_for('admin_set_user_status', uid=user.id) }}" style="margin:0;">
+                {% if user.etl_intern_status == 'active' %}
+                  <input type="hidden" name="status" value="inactive">
+                  <button type="submit" class="btn" style="font-size:12px;padding:6px 10px;background:var(--warning);color:var(--navy);"
+                          onclick="return confirm({{ ('Deactivate ' ~ user.full_name ~ '? They will no longer appear in attendance tracking.')|tojson }})">
+                    <i class="fa-solid fa-user-slash"></i> Deactivate
+                  </button>
+                {% else %}
+                  <input type="hidden" name="status" value="active">
+                  <button type="submit" class="btn" style="font-size:12px;padding:6px 10px;background:var(--success);color:white;"
+                          onclick="return confirm({{ ('Activate ' ~ user.full_name ~ ' for attendance tracking?')|tojson }})">
+                    <i class="fa-solid fa-user-check"></i> Activate
+                  </button>
+                {% endif %}
+              </form>
+              <form method="POST" action="{{ url_for('admin_delete_user', uid=user.id) }}" style="margin:0;"
+                    onsubmit="return confirm({{ ('Delete ' ~ user.full_name ~ '? This will remove all their logs too.')|tojson }})">
+                <button type="submit" class="btn btn-danger" style="font-size:12px;padding:6px 10px;" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -93,15 +124,16 @@
   {% endif %}
 </div>
 
-{% if users %}
+{% set active_users = users|selectattr('etl_intern_status', 'equalto', 'active')|list %}
+{% if active_users %}
 <div class="card" style="margin-top:20px;">
   <div class="card-header">
     <span class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--gold)"></i> Interns by Unit</span>
-    <span class="badge badge-navy">{{ users|length }} total</span>
+    <span class="badge badge-navy">{{ active_users|length }} active</span>
   </div>
   <div class="card-body">
     {% set unit_counts = {} %}
-    {% for user in users %}
+    {% for user in active_users %}
       {% if user.unit in unit_counts %}
         {% set _ = unit_counts.update({user.unit: unit_counts[user.unit] + 1}) %}
       {% else %}
@@ -141,6 +173,7 @@
 function applyUserFilters() {
   const search = document.getElementById('u-search').value.toLowerCase();
   const unit = document.getElementById('u-unit').value;
+  const status = document.getElementById('u-status').value;
   const sort = document.getElementById('u-sort').value;
 
   const tbody = document.querySelector('table tbody');
@@ -149,9 +182,11 @@ function applyUserFilters() {
   rows.forEach(row => {
     const name = row.dataset.name || '';
     const rowUnit = row.dataset.unit || '';
+    const rowStatus = row.dataset.status || '';
     const matchSearch = !search || name.includes(search);
     const matchUnit = !unit || rowUnit === unit;
-    row.style.display = (matchSearch && matchUnit) ? '' : 'none';
+    const matchStatus = !status || rowStatus === status;
+    row.style.display = (matchSearch && matchUnit && matchStatus) ? '' : 'none';
   });
 
   const visible = rows.filter(r => r.style.display !== 'none');
@@ -177,6 +212,7 @@ function applyUserFilters() {
 function resetUserFilters() {
   document.getElementById('u-search').value = '';
   document.getElementById('u-unit').value = '';
+  document.getElementById('u-status').value = '';
   document.getElementById('u-sort').value = 'alpha-asc';
   applyUserFilters();
 }
