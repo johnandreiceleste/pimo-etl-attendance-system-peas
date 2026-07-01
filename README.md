@@ -63,11 +63,3 @@ pimo-etl-dtr/
 
 > ⚠️ Attendance only records on **Mondays**.
 
-## Deployment (Vercel)
-Replace SQLite with Vercel Postgres:
-```
-pip install psycopg2-binary
-```
-Update `SQLALCHEMY_DATABASE_URI` in `app.py` to your Vercel Postgres connection string.
-
-For photo storage, integrate with Vercel Blob SDK instead of local `static/uploads/`.
